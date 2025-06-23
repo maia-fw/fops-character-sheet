@@ -1,2 +1,2 @@
 # fops-character-sheet
-Super simple online Dueling Fops of Vindamere character sheet
+Super simple digital Dueling Fops of Vindamere character sheet
