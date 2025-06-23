@@ -1,18 +1,205 @@
-{
-  "name": "fops-character-sheet-app",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "vite": "^4.0.0",
-    "@vitejs/plugin-react": "^4.0.0"
-  }
+import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+
+export default function FopsCharacterSheet() {
+  const [character, setCharacter] = useState({
+    name: '',
+    fencingSchool: '',
+    foppish: 5,
+    serious: 5,
+    duelist: 5,
+    aristocrat: 5,
+    beloveds: [{ name: '', status: 'Infatuated', hasLeft: false, notes: '' }],
+    inventory: '',
+    status: '',
+    scandals: '',
+    result: null,
+    outcome: null
+  });
+
+  const [muted, setMuted] = useState(false);
+  const [sounds, setSounds] = useState({ success: null, failure: null });
+
+  useEffect(() => {
+    const loadSounds = async () => {
+      const successRes = await fetch("/mnt/data/short-success-sound-glockenspiel-treasure-video-game-6346.mp3");
+      const successBlob = await successRes.blob();
+      const successUrl = URL.createObjectURL(successBlob);
+
+      const failRes = await fetch("/mnt/data/playful-failure-310480.mp3");
+      const failBlob = await failRes.blob();
+      const failUrl = URL.createObjectURL(failBlob);
+
+      setSounds({ success: successUrl, failure: failUrl });
+    };
+    loadSounds();
+  }, []);
+
+  const handleChange = (field, value) => {
+    setCharacter({ ...character, [field]: value });
+  };
+
+  const handleBelovedChange = (index, field, value) => {
+    const updated = [...character.beloveds];
+    updated[index][field] = field === 'hasLeft' ? value.target.checked : value;
+    setCharacter({ ...character, beloveds: updated });
+  };
+
+  const addBeloved = () => {
+    setCharacter({
+      ...character,
+      beloveds: [...character.beloveds, { name: '', status: 'Infatuated', hasLeft: false, notes: '' }]
+    });
+  };
+
+  const playSound = (type) => {
+    if (muted || !sounds[type]) return;
+    const audio = new Audio(sounds[type]);
+    audio.play();
+  };
+
+  const roll = (stat1, stat2, mode = 'normal') => {
+    const stat1Val = parseInt(character[stat1], 10) || 0;
+    const stat2Val = parseInt(character[stat2], 10) || 0;
+
+    let rolls = [Math.floor(Math.random() * 10) + 1];
+    if (mode === 'adv' || mode === 'dis') {
+      rolls.push(Math.floor(Math.random() * 10) + 1);
+    }
+
+    const rollVal = mode === 'adv' ? Math.max(...rolls) : mode === 'dis' ? Math.min(...rolls) : rolls[0];
+    const total = rollVal + stat1Val + stat2Val;
+    const isSuccess = total >= 15;
+    const outcome = isSuccess ? '🎉 Success! You have made a glorious impression.' : '💔 Failure! You’ve caused a scandal... or worse.';
+
+    playSound(isSuccess ? 'success' : 'failure');
+
+    setCharacter({
+      ...character,
+      result: `${mode !== 'normal' ? `${rolls.join(' / ')} → ` : ''}1d10 (${rollVal}) + ${stat1Val} + ${stat2Val} = ${total}`,
+      outcome: outcome
+    });
+  };
+
+  const statusColors = {
+    Infatuated: 'bg-pink-100',
+    Ambivalent: 'bg-yellow-100',
+    Angry: 'bg-orange-200',
+    Disgusted: 'bg-red-200',
+    Betrayed: 'bg-gray-300'
+  };
+
+  const affectionMap = {
+    Infatuated: '💘',
+    Ambivalent: '😐',
+    Angry: '😠',
+    Disgusted: '🤢',
+    Betrayed: '💔'
+  };
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto space-y-4 bg-gradient-to-b from-pink-50 to-white rounded-lg shadow-xl">
+      <h1 className="text-4xl font-bold text-center text-fuchsia-800">Dueling Fops of Vindamere</h1>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setMuted(!muted)}
+          className="mb-2 text-sm px-4 py-1 border rounded bg-fuchsia-100 hover:bg-fuchsia-200"
+        >
+          {muted ? '🔇 Sounds Off' : '🔊 Sounds On'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block font-semibold">Character Name</label>
+          <input className="border p-2 w-full" value={character.name} onChange={e => handleChange('name', e.target.value)} />
+        </div>
+        <div>
+          <label className="block font-semibold">Fencing School</label>
+          <input className="border p-2 w-full" value={character.fencingSchool} onChange={e => handleChange('fencingSchool', e.target.value)} />
+        </div>
+
+        <div>
+          <label className="block font-semibold">Foppish</label>
+          <input type="number" className="border p-2 w-full" value={character.foppish} onChange={e => handleChange('foppish', e.target.value)} />
+        </div>
+        <div>
+          <label className="block font-semibold">Serious</label>
+          <input type="number" className="border p-2 w-full" value={character.serious} onChange={e => handleChange('serious', e.target.value)} />
+        </div>
+        <div>
+          <label className="block font-semibold">Duelist</label>
+          <input type="number" className="border p-2 w-full" value={character.duelist} onChange={e => handleChange('duelist', e.target.value)} />
+        </div>
+        <div>
+          <label className="block font-semibold">Aristocrat</label>
+          <input type="number" className="border p-2 w-full" value={character.aristocrat} onChange={e => handleChange('aristocrat', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="col-span-2">
+        <h2 className="text-xl font-semibold text-fuchsia-700 mt-6">Beloveds</h2>
+        {character.beloveds.map((beloved, index) => (
+          <div key={index} className="grid grid-cols-5 gap-2 items-start mb-2">
+            <input className="border p-2 col-span-1" placeholder="Name" value={beloved.name} onChange={e => handleBelovedChange(index, 'name', e.target.value)} />
+            <select className={`border p-2 col-span-1 ${statusColors[beloved.status]}`} value={beloved.status} onChange={e => handleBelovedChange(index, 'status', e.target.value)}>
+              <option>Infatuated</option>
+              <option>Ambivalent</option>
+              <option>Angry</option>
+              <option>Disgusted</option>
+              <option>Betrayed</option>
+            </select>
+            <div className="col-span-1 text-center text-2xl">{affectionMap[beloved.status]}</div>
+            <textarea className="border p-2 col-span-1 text-sm" placeholder="Notes..." value={beloved.notes} onChange={e => handleBelovedChange(index, 'notes', e.target.value)} />
+            <label className="flex items-center space-x-2">
+              <input type="checkbox" checked={beloved.hasLeft} onChange={e => handleBelovedChange(index, 'hasLeft', e)} />
+              <span className="text-sm">Left?</span>
+            </label>
+          </div>
+        ))}
+        <Button variant="secondary" onClick={addBeloved}>+ Add Beloved</Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 mt-4">
+        <div>
+          <label className="block font-semibold">Inventory (Clothes, Weapons, Letters)</label>
+          <textarea className="border p-2 w-full" rows={2} value={character.inventory} onChange={e => handleChange('inventory', e.target.value)} />
+        </div>
+        <div>
+          <label className="block font-semibold">Current Status Effects</label>
+          <textarea className="border p-2 w-full" rows={2} value={character.status} onChange={e => handleChange('status', e.target.value)} />
+        </div>
+        <div>
+          <label className="block font-semibold">Notable Feats or Scandals</label>
+          <textarea className="border p-2 w-full" rows={2} value={character.scandals} onChange={e => handleChange('scandals', e.target.value)} />
+        </div>
+      </div>
+
+      <div className="space-y-4 mt-6">
+        <h2 className="text-xl font-semibold text-fuchsia-700">Skill Rolls</h2>
+        <div className="space-y-4">
+          {[
+            ['Seduce', 'foppish', 'aristocrat'],
+            ['Brag', 'foppish', 'duelist'],
+            ['Buy', 'serious', 'duelist'],
+            ['Strike', 'serious', 'aristocrat']
+          ].map(([label, stat1, stat2]) => (
+            <div key={label} className="grid grid-cols-3 gap-2 items-center">
+              <Button onClick={() => roll(stat1, stat2)}>{label} / Normal</Button>
+              <hr className="border-gray-300" />
+              <div className="flex gap-2">
+                <Button onClick={() => roll(stat1, stat2, 'adv')}>{label} / Adv</Button>
+                <Button onClick={() => roll(stat1, stat2, 'dis')}>{label} / Dis</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {character.result && <div className="mt-2 font-mono text-blue-800">Roll Result: {character.result}</div>}
+        {character.outcome && (
+          <div className={`text-lg font-semibold ${character.outcome.includes('Success') ? 'text-green-600' : 'text-red-600'}`}>{character.outcome}</div>
+        )}
+      </div>
+    </div>
+  );
 }
